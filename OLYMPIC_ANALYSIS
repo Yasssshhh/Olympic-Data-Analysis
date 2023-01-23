@@ -1,0 +1,381 @@
+importing the necessary libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.pylab as pylab
+from pandasql import sqldf
+import json
+import plotly.graph_objs as go
+import plotly.figure_factory as ff
+from plotly import tools
+from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
+import plotly.express as px
+import seaborn as sns
+#from bubbly.bubbly import bubbleplot 
+#from __future__ import division
+
+# setting the default values for graph
+params = {'legend.fontsize': 'x-large',
+          'figure.figsize': (20, 10),
+         'axes.labelsize': 'x-large',
+         'axes.titlesize':'xx-large',
+         'xtick.labelsize':'medium',
+         'ytick.labelsize':'x-large'}
+pylab.rcParams.update(params)
+
+class color:
+    PURPLE = '\033[95m'
+    CYAN = '\033[96m'
+    DARKCYAN = '\033[36m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    END = '\033[0m'
+
+df = pd.read_csv('athlete_events.csv')
+regions = pd.read_csv('noc_regions.csv')
+
+merged = pd.merge(df, regions, on='NOC', how='left')
+merged.head()
+
+# Splitting the merged dataset into male athletes and female athletes
+male_df = sqldf('Select region, Year, Season, count(sex) as Male_count from merged where Sex = "M" group by region, Year, Season')
+female_df = sqldf('Select region, Year, Season, count(sex) as Female_count from merged where Sex = "F" group by region, Year, Season')
+
+intercalated = sqldf("Select * From merged Where Year = 1906")
+intercalated.head(5)
+
+#Initial variables for plotting the player count
+
+# summer olypmic year
+summerxbarMain= [ ]
+year1 = 1896
+for i in range(0,31):
+    summerxbarMain.append(year1)
+    year1 = year1 + 4
+summerxbarMain.remove(1940)
+summerxbarMain.remove(1944)
+summerxbarMain.remove(1916)
+
+#winter olympic year
+winterXbarMain = [1924, 1928, 1932,1936,1948,1952,1956,1960,1964,1968,1972,1976,1980,1984,1988,1992,1994,1998,2002,2006,2010,2014,2018]
+
+#country names
+summer_countryNames = list(set(summer_male_df['region'].unique().tolist()) | set(summer_female_df['region'].unique().tolist()))
+winter_countryNames = list(set(winter_male_df['region'].unique().tolist()) | set(winter_female_df['region'].unique().tolist()))
+
+
+
+# setting the default values for graph
+params = {'legend.fontsize': 'x-large',
+          'figure.figsize': (20, 10),
+         'axes.labelsize': 'x-large',
+         'axes.titlesize':'xx-large',
+         'xtick.labelsize':'medium',
+         'ytick.labelsize':'x-large'}
+pylab.rcParams.update(params)
+
+# Plotting the player count over the years
+def player_count(maleData, femaleData, season_year, season_country, season):
+    xbarMain = season_year
+    countq=0
+    for q in season_country:
+        summa = maleData[maleData['region'] == q]
+        xbar = summa['Year'].tolist()
+        bars1 = summa['Male_count'].tolist()
+        if 1906 in xbar:
+
+ remove1906 = xbar.index(1906)
+            bars1.pop(remove1906)
+            xbar.pop(remove1906)
+        for i in enumerate(xbarMain):
+            if i[1] not in xbar:
+                bars1.insert(i[0], np.nan)
+
+        summa1 = femaleData[femaleData['region'] == q]
+        xbar1 = summa1['Year'].tolist()
+        bars2 = summa1['Female_count'].tolist()
+        if 1906 in xbar1:
+            remove1906 = xbar1.index(1906)
+            bars2.pop(remove1906)
+            xbar1.pop(remove1906)
+        for i in enumerate(xbarMain):
+            if i[1] not in xbar1:
+                bars2.insert(i[0], np.nan)
+
+        xbarMainStr = [str(x) for x in xbarMain]
+        
+        plt.plot(xbarMainStr, bars1, marker='o',markersize = 8, color='blue', linewidth = 2.0,label = 'Male')
+        plt.plot(xbarMainStr, bars2, marker='^',markersize = 8, color='red', linewidth = 2.0,label = 'Female')
+        plt.xticks( np.arange(28), xbarMainStr)
+        plt.xlabel('Year')
+        plt.ylabel('Athlete count')
+        
+        plt.title('Country : ' + q + ' -- Season : ' + season)
+plt.legend()
+
+        plt.show()
+        countq = countq+1
+        print(countq)
+        xbar = []
+        bars1= []
+        bars2 = []
+
+#Plotting for summer season
+player_count(summer_male_df, summer_female_df, summerxbarMain, summer_countryNames, 'Summer ')
+
+#Plotting for winter season
+player_count(winter_male_df, winter_female_df, winterXbarMain, winter_countryNames, 'Winter ')
+
+# Grouped BAR plot of the medals won of the top 10 countries
+
+labels = country_medalcount['Country'].tolist()[0:10]
+gold_means = country_medalcount['No_of_Gold_Won'].tolist()[0:10]
+silver_means = country_medalcount['No_of_Silver_Won'].tolist()[0:10]
+bronze_means = country_medalcount['No_of_Bronze_Won'].tolist()[0:10]
+
+x = np.arange(len(labels))  # the label locations
+width = 0.2  # the width of the bars
+
+fig, ax = plt.subplots()
+rects1 = ax.bar(x - width/3, gold_means, width, color = 'Gold', label='Gold')
+rects2 = ax.bar(x + 2*(width/3), silver_means, width, color = 'Silver', label='Silver')
+rects2 = ax.bar(x + 5*(width/3), bronze_means, width, color = 'Brown' ,label='Bronze')
+
+# Add some text for labels, title and custom x-axis tick labels, etc.
+ax.set_ylabel('Medals count', fontsize=25)
+ax.set_xlabel('\nCountry', fontsize=25)
+ax.set_title('Top 10 countries by medal count\n', fontsize=25)
+ax.set_xticks(x)
+ax.set_xticklabels(labels, fontsize=15)
+ax.legend(fontsize=21)
+
+
+fig.tight_layout()
+plt.show()
+
+#Cholorepeth Map for countrywise medal count
+def choloropethMapPlot(columnName, colorScale, title, projectionType):
+    fig = go.Figure(
+        data=go.Choropleth(
+            locations=country_medalcount['Country'], # Spatial coordinates
+            z = country_medalcount[columnName].astype(float), # Data to be color-coded
+            locationmode = 'country names', # set of locations match entries in `locations`
+            colorscale = colorScale,
+            colorbar_title = "Medals Count",
+        ),
+        layout = go.Layout(
+            title = title,
+            geo = dict(
+                showframe = True,
+                showlakes = False,
+                showcoastlines = True,
+                projection = dict(
+                    type = projectionType
+            )
+        )
+    ))
+    fig.show()
+
+# Country wise medal count plot
+choloropethMapPlot('No_of_Gold_Won', 'Reds', "Country_wise Gold medals won", 'natural earth')
+choloropethMapPlot('No_of_Silver_Won', 'Greens', "Country_wise Silver medals won", 'natural earth')
+choloropethMapPlot('No_of_Bronze_Won', 'Blues', "Countrywise Bronze medals won", 'natural earth')
+choloropethMapPlot('Total Medals Won', 'Blues', "Countrywise total medals won", 'orthographic')
+
+# Getting the top countries by sport
+temp = sport_best['region'].unique().tolist()
+answer = {}
+def merge(list1, list2): 
+    merged_list = {list1[i]: list2[i] for i in range(0, len(list1))}
+    return merged_list 
+for i in temp:
+    tmpVar = merge(sport_best[sport_best['region'] == i]['Sport'].head().tolist(),sport_best[sport_best['region'] == i]['count(Medal)'].head().tolist())
+    answer[i] = tmpVar
+country_best_sport = json.dumps(answer, indent = 2)
+
+# player_best
+temp = player_best['Sport'].unique().tolist()
+answer = {}
+def merge(list1, list2): 
+    merged_list = {list1[i]: list2[i] for i in range(0, len(list1))}
+    return merged_list 
+for i in temp:
+    tmpVar = merge(player_best[player_best['Sport'] == i]['Name'].head().tolist(),player_best[player_best['Sport'] == i]['count(Medal)'].head().tolist())
+    answer[i] = tmpVar
+player_best_sport = json.dumps(answer, indent = 2)   
+
+# plotting the graph for top 10 players
+
+x1 = best_player.head(10)['Name'].tolist()
+y1 = best_player.head(10)['count(Medal)'].tolist()
+
+plt.bar(x1, y1, color='blue')
+
+plt.xlabel('Players')
+plt.ylabel('Medal count')
+plt.title('Top Players (By medal count)')
+plt.xticks(rotation=70)
+plt.show()
+
+dataset = sqldf('SELECT Sport,Year,AVG(Height) As Mean_Height,AVG(Weight) As Mean_Weight,COUNT(DISTINCT ID) As No_of_Athletes FROM merged Where Season = "Summer" Group by Sport, Year Order by Year, Sport')
+dataset_summer=dataset.reset_index(drop=True)
+hover_text = []
+for index, row in dataset_summer.iterrows():
+    hover_text.append(('Year: {}<br>'+
+                       'Sport: {}<br>'+
+                      'Number of athlets: {}<br>'+
+                      'Mean Height: {}<br>'+
+                      'Mean Weight: {}<br>').format(row['Year'], 
+                                            row['Sport'],
+                                            row['No_of_Athletes'],
+                                            round(row['Mean_Height'],2),
+                                            round(row['Mean_Weight'],2)))
+dataset_summer['hover_text'] = hover_text
+dataset_summer.head(5)
+
+#Defining the parameters for the plot
+years = (dataset_summer.groupby(['Year'])['Year'].nunique()).index
+sports = (dataset_summer.groupby(['Sport'])['Sport'].nunique()).index
+# make figure
+figure = {
+    'data': [],
+    'layout': {},
+    'frames': []
+}
+
+# fill in most of layout
+figure['layout']['xaxis'] = {'range': [140, 200], 'title': 'Height'}
+figure['layout']['yaxis'] = {'range': [20, 200],'title': 'Weight'}
+figure['layout']['hovermode'] = 'closest'
+figure['layout']['showlegend'] = False
+figure['layout']['sliders'] = {
+    'args': [
+        'transition', {
+            'duration': 400,
+            'easing': 'cubic-in-out'
+        }
+    ],
+    'initialValue': '1896',
+    'plotlycommand': 'animate',
+    'values': years,
+    'visible': True
+}
+
+figure['layout']['updatemenus'] = [
+    {
+        'buttons': [
+            {
+                'args': [None, {'frame': {'duration': 500, 'redraw': False},
+                         'fromcurrent': True, 'transition': {'duration': 300, 'easing': 'quadratic-in-out'}}],
+                'label': 'Play',
+                'method': 'animate'
+            },
+            {
+                'args': [[None], {'frame': {'duration': 0, 'redraw': False}, 'mode': 'immediate',
+                'transition': {'duration': 0}}],
+                'label': 'Pause',
+                'method': 'animate'
+            }
+        ],
+        'direction': 'left',
+        'pad': {'r': 10, 't': 87},
+        'showactive': False,
+        'type': 'buttons',
+        'x': 0.1,
+        'xanchor': 'right',
+        'y': 0,
+        'yanchor': 'top'
+    }
+]
+sliders_dict = {
+    'active': 0,
+    'yanchor': 'top',
+    'xanchor': 'left',
+    'currentvalue': {
+        'font': {'size': 20},
+        'prefix': 'Year:',
+        'visible': True,
+        'xanchor': 'right'
+    },
+    'transition': {'duration': 300, 'easing': 'cubic-in-out'},
+    'pad': {'b': 10, 't': 50},
+    'len': 0.9,
+    'x': 0.1,
+    'y': 0,
+    'steps': []
+}
+# make data
+year = 1896
+for sport in sports:
+    dataset_by_year = dataset_summer[dataset_summer['Year'] == year]
+    dataset_by_year_and_season = dataset_by_year[dataset_by_year['Sport'] == sport]
+
+    data_dict = {
+        'x': list(dataset_by_year_and_season['Mean_Height']),
+        'y': list(dataset_by_year_and_season['Mean_Weight']),
+        'mode': 'markers',
+        'text': list(dataset_by_year_and_season['hover_text']),
+        'marker': {
+            'sizemode': 'area',
+            'sizeref': 1,
+            'size': list(dataset_by_year_and_season['No_of_Athletes'])
+        },
+        'name': sport
+    }
+    figure['data'].append(data_dict)
+# make frames
+for year in years:
+    frame = {'data': [], 'name': str(year)}
+    for sport in sports:
+        dataset_by_year = dataset_summer[dataset_summer['Year'] == int(year)]
+        dataset_by_year_and_season = dataset_by_year[dataset_by_year['Sport'] == sport]
+
+        data_dict = {
+            'x': list(dataset_by_year_and_season['Mean_Height']),
+            'y': list(dataset_by_year_and_season['Mean_Weight']),
+            'mode': 'markers',
+            'text': list(dataset_by_year_and_season['hover_text']),
+            'marker': {
+                'sizemode': 'area',
+                'sizeref': 1,
+                'size':  list(dataset_by_year_and_season['No_of_Athletes'])
+            },
+            'name': sport
+        }
+        frame['data'].append(data_dict)
+
+    figure['frames'].append(frame)
+    slider_step = {'args': [
+        [year],
+        {'frame': {'duration': 300, 'redraw': False},
+         'mode': 'immediate',
+       'transition': {'duration': 300}}
+     ],
+     'label': year,
+     'method': 'animate'}
+    sliders_dict['steps'].append(slider_step)
+figure['layout']['sliders'] = [sliders_dict]
+iplot(figure)
+
+fv = merged.describe(include='all')
+fv = fv.drop(['notes'], axis=1).reset_index()
+coll = fv.columns.tolist()
+coll.remove('index')
+
+#Printing the appropriate stats for each column/feature
+def merge(list1, list2): 
+    merged_list = {list1[i]: list2[i] for i in range(0, len(list1))}
+    return merged_list 
+for i in coll:
+    tmp = fv[['index', i]]
+    tmp.dropna(inplace= True)
+    print(i)
+    t1 = tmp['index'].tolist()
+    t2 = tmp[i].tolist()
+    answerA = merge(t1, t2)
+    print(answerA)
+    print("-------------------------------------------------------------")
